@@ -1,4 +1,5 @@
 #include <string>
+#include <thread>
 #include <cstring>
 #include <math.h>
 #include <vector>
@@ -11,4 +12,4 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <thread>
+#include "libs/glew.c"

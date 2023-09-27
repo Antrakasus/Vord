@@ -72,7 +72,7 @@
 ** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 ** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 ** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-,** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 ** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 */
@@ -93,7 +93,7 @@
 #if defined(__REGAL_H__)
 #error Regal.h included before glew.h
 #endif
-#if defined(__glext_h_) || defined(__GLEXT_H_) || defined(__gl_glext_h_)
+#if defined(__glext_h_) || defined(__GLEXT_H_)
 #error glext.h included before glew.h
 #endif
 #if defined(__gl_ATI_h_)
@@ -108,7 +108,6 @@
 #define __REGAL_H__
 #define __X_GL_H
 #define __glext_h_
-#define __gl_glext_h_
 #define __GLEXT_H_
 #define __gl_ATI_h_
 

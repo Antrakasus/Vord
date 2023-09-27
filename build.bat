@@ -1,0 +1,1 @@
+g++ main.cpp -I./include -L./libs -lglfw3 -lopengl32 -lgdi32 -DGLEW_STATIC -o vord.exe
