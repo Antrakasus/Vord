@@ -1,8 +1,13 @@
 #version 430 core
-layout(location = 0) in vec3 vertexPosition_modelspace;
-layout(location = 1) uniform vec3 cameraPosition;
+layout(location = 0) in vec3 vertexPosition;
 
+/*
+in mat4 scale;
+in mat4 translation;
+in mat4 cameraTranslation;
+in mat4 rotation;
+in mat4 cameraRotation
+*/
 void main(){
-    gl_Position.xyz = vertexPosition_modelspace-cameraPosition;
-    gl_Position.w = gl_Position.z;
+    gl_Position = /*translation * rotation * scale */ vec4(vertexPosition, 1);
 }

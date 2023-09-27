@@ -1,35 +1,15 @@
-#include <string>
-#include <math.h>
-#include <vector>
-#include <chrono>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include "main.hpp"
 
-#define cameraPos 1
+typedef float vec3[3];
+typedef vec3 tri[4];
 
 void frame();
 void draw();
 void glSetup();
+void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods);
 int windowSetup();
+tri* readStl(std::string path);
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
-
-
-class vec3{
-	public:
-		float v1,v2,v3;
-
-	vec3(float f1=0.0f, float f2=0.0f,float f3=0.0f){
-		v1=f1;
-		v2=f2;
-		v3=f3;
-	}
-};
 
 
 GLFWmonitor** monitors;
@@ -37,9 +17,10 @@ GLFWwindow* window;
 GLuint programID;
 GLuint VertexArrayID;
 GLuint vertexbuffer;
-vec3 camera;
+glm::vec3 camera;
+tri* dragon;
 
-const GLfloat g_vertex_buffer_data[] = {
+float g_vertex_buffer_data[] = {
    -1.0f, -1.0f, 0.0f,
    1.0f, -1.0f, 0.0f,
    0.0f,  1.0f, 0.0f,
@@ -52,19 +33,24 @@ float timeRandom(float x=0, float y=9){
 
 
 int main(){
+	dragon = readStl("/home/zhynx/Downloads/Adult Black Dragon Head (88.2%).stl");
     if(windowSetup()!=0){
         return -1;
     }
     glSetup();
     programID = LoadShaders( "main.vs", "main.fs" );
 	glUseProgram(programID);
+	glfwSetKeyCallback(window,keyHandler);
     while(!glfwWindowShouldClose(window)){
         glfwPollEvents();
         frame();
     }
+	glfwDestroyWindow(window);
     glfwTerminate();
+	free(dragon);
     return 0;
 }
+
 
 void frame(){
     glClearColor(0.0f,0.1f,0.2f,0.5f);
@@ -75,22 +61,50 @@ void frame(){
 
 
 void draw(){
-	camera.v1=timeRandom(1)*5;
-	camera.v2=timeRandom(2)*5;
-	camera.v3=timeRandom(3)*5-10;
-	glUniform3f(cameraPos, camera.v1, camera.v2, camera.v3);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	camera.x=timeRandom(1)*5;
+	camera.y=timeRandom(2)*5;
+	camera.z=timeRandom(3)*5-10;
+
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
     glVertexAttribPointer(
-        0,
-        3,
-        GL_FLOAT,
-        GL_FALSE,
-        0,
-        (void*)0
+        0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
     );
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glDisableVertexAttribArray(0);
+};
+
+
+void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods){
+
+	if (key == GLFW_KEY_E && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window,GL_TRUE);
+	}
+
+}
+
+
+tri* readStl(std::string path){
+    std::fstream strm;
+    strm.open(path, std::ios_base::in | std::ios::binary);
+    if(!strm.is_open()){
+        std::cout<<"Couldn't open file, sorry!\n";
+        return NULL;
+    }
+    strm.seekg(80);
+    char stlBuffer[50];
+    unsigned int streamLength;
+    strm.read(stlBuffer,4);
+    memcpy(&streamLength,&stlBuffer,sizeof(int));
+    std::cout<<"Stl triangle count: " << streamLength << "\n";
+
+    tri* triangles = (tri*) malloc(streamLength*sizeof(tri));
+    for(short i=0; i<=streamLength; i++){
+        strm.read(stlBuffer,50);
+        memcpy(&triangles[i],&stlBuffer, 50);
+    }
+	return triangles;
 }
 
 
@@ -105,11 +119,12 @@ void glSetup(){
 
 int windowSetup(){
     fprintf(stdout,"Starting \n");
-    glfwInit();
+	glfwInit();
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_DECORATED,GL_FALSE);
     int count;
     monitors = glfwGetMonitors(&count);
     if(count==0){
@@ -117,20 +132,20 @@ int windowSetup(){
     }else{
         fprintf(stdout,"Found %i monitor(s)\n",count);
     }
-    window = glfwCreateWindow( 1024, 768, "Test", monitors[0], NULL);
+    window = glfwCreateWindow( 960, 540, "Test", NULL, NULL);
     if( window == NULL ){
         fprintf( stderr, "Failed to open GLFW window \n" );
         glfwTerminate();
         return -1;
     }
-    glfwMakeContextCurrent(window); // Initialize GLEW
-    glewExperimental=true; // Needed in core profile
+    glfwMakeContextCurrent(window);
+    glewExperimental=GL_TRUE;
     if (glewInit() != GLEW_OK) {
         fprintf(stderr, "Failed to initialize GLEW \n");
         return -1;
     }
     fprintf(stdout, "Window setup successful!\n");
-    glfwSetWindowMonitor(window,NULL,100,100,1024,768,GLFW_DONT_CARE);
+    //glfwSetWindowMonitor(window,NULL,100,100,1024,768,GLFW_DONT_CARE);
     return 0;
 }
 

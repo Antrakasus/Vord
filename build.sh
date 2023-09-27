@@ -1,1 +1,1 @@
-sudo g++ main.cpp -lglfw -lGL -lGLEW
+sudo g++ main.cpp -lglfw -lGL -lGLEW -I./include
