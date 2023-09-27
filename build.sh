@@ -1,1 +1,1 @@
-sudo g++ main.cpp -lglfw -lGL -lGLEW -I./include
+sudo g++ main.cpp vord.res -I./include -L./libs -lglfw -lGL -DGLEW_STATIC -o vord.out
