@@ -1,5 +1,8 @@
 #include <string>
+#include <math.h>
 #include <vector>
+#include <chrono>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <stdio.h>
@@ -8,14 +11,26 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-#define cameraPos 2
+#define cameraPos 1
 
-class vec3;
 void frame();
 void draw();
 void glSetup();
 int windowSetup();
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
+
+
+class vec3{
+	public:
+		float v1,v2,v3;
+
+	vec3(float f1=0.0f, float f2=0.0f,float f3=0.0f){
+		v1=f1;
+		v2=f2;
+		v3=f3;
+	}
+};
+
 
 GLFWmonitor** monitors;
 GLFWwindow* window;
@@ -31,16 +46,9 @@ const GLfloat g_vertex_buffer_data[] = {
 };
 
 
-class vec3{
-	public:
-		float v1,v2,v3;
-
-	vec3(float f1=0.0f, float f2=0.0f,float f3=0.0f){
-		v1=f1;
-		v2=f2;
-		v3=f3;
-	}
-};
+float timeRandom(float x=0, float y=9){
+	return sin(x+std::chrono::system_clock::now().time_since_epoch().count()*pow(0.1,y));
+}
 
 
 int main(){
@@ -50,7 +58,6 @@ int main(){
     glSetup();
     programID = LoadShaders( "main.vs", "main.fs" );
 	glUseProgram(programID);
-	glUniform3f(cameraPos,camera.v1, camera.v2, camera.v3);
     while(!glfwWindowShouldClose(window)){
         glfwPollEvents();
         frame();
@@ -68,6 +75,10 @@ void frame(){
 
 
 void draw(){
+	camera.v1=timeRandom(1)*5;
+	camera.v2=timeRandom(2)*5;
+	camera.v3=timeRandom(3)*5-10;
+	glUniform3f(cameraPos, camera.v1, camera.v2, camera.v3);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
     glVertexAttribPointer(
@@ -88,7 +99,7 @@ void glSetup(){
     glBindVertexArray(VertexArrayID);
     glGenBuffers(1, &vertexbuffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_DYNAMIC_DRAW);
 }
 
 
