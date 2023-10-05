@@ -1,31 +1,54 @@
 #include "main.hpp"
 
-typedef float vec3[3];
-typedef vec3 tri[4];
+struct Object{
+	glm::vec3 scale;
+	glm::vec3 position;
+	glm::vec4 rotation;
+	float* mesh;
+	uint count;
+};
+
+
+struct Tri{
+    glm::vec3 normal,v1,v2,v3;
+    short attribute;
+    Tri(glm::vec3 _normal=glm::vec3(), glm::vec3 _v1=glm::vec3(), glm::vec3 _v2=glm::vec3(), glm::vec3 _v3=glm::vec3(), short _attr=0) :
+    normal(_normal), v1(_v1), v2(_v2), v3(_v3), attribute(_attr){}
+};
+
+
+struct stlObject{
+	Tri* triangles;
+	uint count;
+};
+
+
+Object triangle;
+Object triangle2;
+
 
 void frame();
-void draw();
+void draw(const Object o);
 void glSetup();
+void addToDraw(Object o);
 void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods);
 int windowSetup();
-tri* readStl(std::string path);
+Object stlToMesh(stlObject STL);
+stlObject readStl(std::string path);
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
 
-
+std::vector<Object> toDraw;
 GLFWmonitor** monitors;
 GLFWwindow* window;
 GLuint programID;
 GLuint VertexArrayID;
-GLuint vertexbuffer;
+GLuint vertexBuffer;
 glm::vec3 camera;
-tri* dragon;
+Object dragon;
 
-float g_vertex_buffer_data[] = {
-   -1.0f, -1.0f, 0.0f,
-   1.0f, -1.0f, 0.0f,
-   0.0f,  1.0f, 0.0f,
-};
+float* draw_buffer;
 
+glm::mat4 myScalingMatrix = glm::scale(glm::vec3(0.5f,0.5f,0.5f));
 
 float timeRandom(float x=0, float y=9){
 	return sin(x+std::chrono::system_clock::now().time_since_epoch().count()*pow(0.1,y));
@@ -33,41 +56,51 @@ float timeRandom(float x=0, float y=9){
 
 
 int main(){
-	dragon = readStl("/home/zhynx/Downloads/Adult Black Dragon Head (88.2%).stl");
-    if(windowSetup()!=0){
+	triangle.mesh = new float[9]{
+	-1.0f, -1.0f, 0.0f,
+   	1.0f, -1.0f, 0.0f,
+   	0.0f,  1.0f, 0.0f
+	};
+
+
+	triangle.count=3;
+	dragon=stlToMesh(readStl("/home/zhynx/Downloads/Adult Black Dragon Head (88.2%).stl"));
+	if(windowSetup()!=0){
         return -1;
     }
     glSetup();
-    programID = LoadShaders( "main.vs", "main.fs" );
+    programID = LoadShaders( "mainVert.glsl", "mainFrag.glsl" );
 	glUseProgram(programID);
 	glfwSetKeyCallback(window,keyHandler);
+	addToDraw(triangle);
     while(!glfwWindowShouldClose(window)){
         glfwPollEvents();
         frame();
     }
 	glfwDestroyWindow(window);
     glfwTerminate();
-	free(dragon);
+	free(dragon.mesh);
     return 0;
 }
 
 
 void frame(){
-    glClearColor(0.0f,0.1f,0.2f,0.5f);
+    glClearColor(0.0f,0.1f,0.2f,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    draw();
+	camera.x=timeRandom(1)*5;
+	camera.y=timeRandom(2)*5;
+	camera.z=timeRandom(3)*5-10;
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	for(const Object o: toDraw){
+		draw(o);
+	}
     glfwSwapBuffers(window);
 }
 
 
-void draw(){
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	camera.x=timeRandom(1)*5;
-	camera.y=timeRandom(2)*5;
-	camera.z=timeRandom(3)*5-10;
-
+void draw(const Object o){
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+    glBufferData(GL_ARRAY_BUFFER, o.count*3*sizeof(float), o.mesh, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(
         0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
     );
@@ -76,49 +109,76 @@ void draw(){
 };
 
 
+void addToDraw(Object obj){
+	static std::vector<Object>::iterator drawIterator = toDraw.begin();
+	drawIterator = toDraw.insert(drawIterator,obj);
+}
+
+/*
+void removeFromDraw(Object obj){
+	std::vector<Object>::iterator it=std::find(toDraw.begin(), toDraw.end(), obj);
+	if(it != toDraw.end()){
+		toDraw.erase(it);
+	}
+}*/
+
+
 void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods){
 
-	if (key == GLFW_KEY_E && action == GLFW_PRESS){
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
 		glfwSetWindowShouldClose(window,GL_TRUE);
 	}
 
 }
 
 
-tri* readStl(std::string path){
+Object stlToMesh(stlObject STL){
+	Object out;
+	out.count=STL.count;
+	out.mesh=(float*)malloc(out.count*9*sizeof(float));
+	for(int i=0; i<STL.count;i++){
+		for(int j=0; j<3; j++){
+			out.mesh[i*9+j]=STL.triangles[i].v1[j];
+			out.mesh[i*9+j+3]=STL.triangles[i].v2[j];
+			out.mesh[i*9+j+6]=STL.triangles[i].v3[j];
+		}
+	}
+	return out;
+}
+
+
+stlObject readStl(std::string path){
+	stlObject STL;
     std::fstream strm;
     strm.open(path, std::ios_base::in | std::ios::binary);
     if(!strm.is_open()){
         std::cout<<"Couldn't open file, sorry!\n";
-        return NULL;
+        return stlObject();
     }
-    strm.seekg(80);
+	char header[80];
+    strm.read(header,80);
     char stlBuffer[50];
-    unsigned int streamLength;
     strm.read(stlBuffer,4);
-    memcpy(&streamLength,&stlBuffer,sizeof(int));
-    std::cout<<"Stl triangle count: " << streamLength << "\n";
-
-    tri* triangles = (tri*) malloc(streamLength*sizeof(tri));
-    for(short i=0; i<=streamLength; i++){
+    memcpy(&STL.count,&stlBuffer,sizeof(int));
+    STL.triangles = (Tri*) malloc(STL.count*sizeof(Tri));
+    for(int i=0; i<STL.count; i++){
         strm.read(stlBuffer,50);
-        memcpy(&triangles[i],&stlBuffer, 50);
+        memcpy(&STL.triangles[i],&stlBuffer,50);
     }
-	return triangles;
+	return STL;
 }
 
 
 void glSetup(){
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
-    glGenBuffers(1, &vertexbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_DYNAMIC_DRAW);
+    glGenBuffers(1, &vertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	glEnable(GL_CULL_FACE);
 }
 
 
 int windowSetup(){
-    fprintf(stdout,"Starting \n");
 	glfwInit();
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -130,7 +190,7 @@ int windowSetup(){
     if(count==0){
         fprintf(stderr,"Couldn't find any monitor \n");
     }else{
-        fprintf(stdout,"Found %i monitor(s)\n",count);
+        //fprintf(stdout,"Found %i monitor(s)\n",count);
     }
     window = glfwCreateWindow( 960, 540, "Test", NULL, NULL);
     if( window == NULL ){
@@ -144,7 +204,7 @@ int windowSetup(){
         fprintf(stderr, "Failed to initialize GLEW \n");
         return -1;
     }
-    fprintf(stdout, "Window setup successful!\n");
+    //fprintf(stdout, "Window setup successful!\n");
     //glfwSetWindowMonitor(window,NULL,100,100,1024,768,GLFW_DONT_CARE);
     return 0;
 }
@@ -186,7 +246,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	int InfoLogLength;
 
 	// Compile Vertex Shader
-	printf("Compiling shader : %s\n", vertex_file_path);
+	//printf("Compiling shader : %s\n", vertex_file_path);
 	char const * VertexSourcePointer = VertexShaderCode.c_str();
 	glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
 	glCompileShader(VertexShaderID);
@@ -201,7 +261,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	}
 
 	// Compile Fragment Shader
-	printf("Compiling shader : %s\n", fragment_file_path);
+	//printf("Compiling shader : %s\n", fragment_file_path);
 	char const * FragmentSourcePointer = FragmentShaderCode.c_str();
 	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
 	glCompileShader(FragmentShaderID);
@@ -216,7 +276,7 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	}
 
 	// Link the program
-	printf("Linking program\n");
+	//printf("Linking program\n");
 	GLuint ProgramID = glCreateProgram();
 	glAttachShader(ProgramID, VertexShaderID);
 	glAttachShader(ProgramID, FragmentShaderID);
