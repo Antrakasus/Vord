@@ -2,8 +2,7 @@
 #include <thread>
 #include <cstring>
 #include <math.h>
-#include <vector>
-#include <algorithm>
+#include <queue>
 #include <chrono>
 #include <iostream>
 #include <fstream>

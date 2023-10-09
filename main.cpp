@@ -4,22 +4,28 @@ struct Object{
 	glm::vec3 scale;
 	glm::vec3 position;
 	glm::vec4 rotation;
-	float* mesh;
+	glm::vec2 uv;
+	glm::vec3* mesh;
+	uint id;
 	uint count;
 };
 
 
-struct Tri{
+struct stlTri{
     glm::vec3 normal,v1,v2,v3;
     short attribute;
-    Tri(glm::vec3 _normal=glm::vec3(), glm::vec3 _v1=glm::vec3(), glm::vec3 _v2=glm::vec3(), glm::vec3 _v3=glm::vec3(), short _attr=0) :
+    stlTri(glm::vec3 _normal=glm::vec3(), glm::vec3 _v1=glm::vec3(), glm::vec3 _v2=glm::vec3(), glm::vec3 _v3=glm::vec3(), short _attr=0) :
     normal(_normal), v1(_v1), v2(_v2), v3(_v3), attribute(_attr){}
 };
 
 
 struct stlObject{
-	Tri* triangles;
+	stlTri* triangles;
 	uint count;
+};
+
+struct objObject{
+	
 };
 
 
@@ -30,14 +36,15 @@ Object triangle2;
 void frame();
 void draw(const Object o);
 void glSetup();
-void addToDraw(Object o);
+void addToDraw(Object* o);
+int removeFromDraw(Object* o);
 void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods);
 int windowSetup();
 Object stlToMesh(stlObject STL);
 stlObject readStl(std::string path);
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path);
 
-std::vector<Object> toDraw;
+std::queue<Object*> toDraw;
 GLFWmonitor** monitors;
 GLFWwindow* window;
 GLuint programID;
@@ -56,14 +63,17 @@ float timeRandom(float x=0, float y=9){
 
 
 int main(){
-	triangle.mesh = new float[9]{
-	-1.0f, -1.0f, 0.0f,
-   	1.0f, -1.0f, 0.0f,
-   	0.0f,  1.0f, 0.0f
+	triangle.mesh = new glm::vec3[3]{
+	glm::vec3(-1.0f, -1.0f, 0.0f),
+   	glm::vec3(1.0f, -1.0f, 0.0f),
+   	glm::vec3(0.0f,  1.0f, 0.0f)
 	};
 
-
+	triangle.position=glm::vec3(0,0,0);
 	triangle.count=3;
+	triangle.id=0;
+	triangle2=triangle;
+	triangle2.id=1;
 	dragon=stlToMesh(readStl("/home/zhynx/Downloads/Adult Black Dragon Head (88.2%).stl"));
 	if(windowSetup()!=0){
         return -1;
@@ -72,7 +82,8 @@ int main(){
     programID = LoadShaders( "mainVert.glsl", "mainFrag.glsl" );
 	glUseProgram(programID);
 	glfwSetKeyCallback(window,keyHandler);
-	addToDraw(triangle);
+	addToDraw(&triangle);
+	addToDraw(&triangle2);
     while(!glfwWindowShouldClose(window)){
         glfwPollEvents();
         frame();
@@ -91,8 +102,13 @@ void frame(){
 	camera.y=timeRandom(2)*5;
 	camera.z=timeRandom(3)*5-10;
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	for(const Object o: toDraw){
-		draw(o);
+	Object* current;
+	for(int i=0; i<toDraw.size();i++){
+		current=toDraw.front();
+		current->position.x=timeRandom(current->id);
+		draw(*current);
+		toDraw.pop();
+		toDraw.push(current);
 	}
     glfwSwapBuffers(window);
 }
@@ -104,23 +120,33 @@ void draw(const Object o){
     glVertexAttribPointer(
         0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
     );
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+	glm::mat4 translation= glm::translate(o.position);
+	glUniformMatrix4fv(glGetUniformLocation(programID,"translation"),1,GL_FALSE,&translation[0][0]);
+    glDrawArrays(GL_TRIANGLES, 0, o.count);
     glDisableVertexAttribArray(0);
 };
 
 
-void addToDraw(Object obj){
-	static std::vector<Object>::iterator drawIterator = toDraw.begin();
-	drawIterator = toDraw.insert(drawIterator,obj);
+void addToDraw(Object* o){
+	toDraw.push(o);
 }
 
-/*
-void removeFromDraw(Object obj){
-	std::vector<Object>::iterator it=std::find(toDraw.begin(), toDraw.end(), obj);
-	if(it != toDraw.end()){
-		toDraw.erase(it);
+
+int removeFromDraw(Object* o){
+	uint count=0;
+	uint size=toDraw.size();
+	Object* current;
+	for(uint i=0; i<size;i++){
+		current=toDraw.front();
+		toDraw.pop();
+		if(current->id==o->id){
+			count++;
+		}else{
+			toDraw.push(current);
+		}
 	}
-}*/
+	return count;
+}
 
 
 void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods){
@@ -135,19 +161,18 @@ void keyHandler(GLFWwindow* window, int key, int scancode, int action, int mods)
 Object stlToMesh(stlObject STL){
 	Object out;
 	out.count=STL.count;
-	out.mesh=(float*)malloc(out.count*9*sizeof(float));
+	out.mesh=(glm::vec3*)malloc(out.count*9*sizeof(float));
 	for(int i=0; i<STL.count;i++){
-		for(int j=0; j<3; j++){
-			out.mesh[i*9+j]=STL.triangles[i].v1[j];
-			out.mesh[i*9+j+3]=STL.triangles[i].v2[j];
-			out.mesh[i*9+j+6]=STL.triangles[i].v3[j];
-		}
+		out.mesh[i*3]=STL.triangles[i].v1;
+		out.mesh[i*3+1]=STL.triangles[i].v2;
+		out.mesh[i*3+2]=STL.triangles[i].v3;
 	}
 	return out;
 }
 
 
 stlObject readStl(std::string path){
+
 	stlObject STL;
     std::fstream strm;
     strm.open(path, std::ios_base::in | std::ios::binary);
@@ -160,12 +185,18 @@ stlObject readStl(std::string path){
     char stlBuffer[50];
     strm.read(stlBuffer,4);
     memcpy(&STL.count,&stlBuffer,sizeof(int));
-    STL.triangles = (Tri*) malloc(STL.count*sizeof(Tri));
+    STL.triangles = (stlTri*) malloc(STL.count*sizeof(stlTri));
     for(int i=0; i<STL.count; i++){
         strm.read(stlBuffer,50);
         memcpy(&STL.triangles[i],&stlBuffer,50);
     }
 	return STL;
+}
+
+
+objObject readObj(std::string path){
+	objObject out;
+	return out;
 }
 
 
