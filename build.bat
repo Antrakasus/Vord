@@ -1,1 +1,1 @@
-g++ main.cpp vord.res -I./include -L./libs -lglfw3 -lopengl32 -lgdi32 -DGLEW_STATIC -o vord.exe
+g++ main.cpp vord.res -I./include -L./libs -lglfw3 -lopengl32 -lgdi32 -static-libstdc++ -static -static-libgcc -DGLEW_STATIC -o vord.exe
