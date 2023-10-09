@@ -8,5 +8,5 @@ uniform mat4 rotation;
 
 void main(){
     gl_Position.xyz = /*translation * rotation * scale */ vertexPosition;
-    gl_Position.w=5;
+    gl_Position.w=1;
 }

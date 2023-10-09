@@ -56,7 +56,7 @@ float timeRandom(float x=0, float y=9){
 
 
 int main(){
-	triangle.mesh = new float[9]{
+	triangle.mesh = new float[18]{
 	-1.0f, -1.0f, 0.0f,
    	1.0f, -1.0f, 0.0f,
    	0.0f,  1.0f, 0.0f
@@ -64,7 +64,7 @@ int main(){
 
 
 	triangle.count=3;
-	dragon=stlToMesh(readStl("/home/zhynx/Downloads/Adult Black Dragon Head (88.2%).stl"));
+	dragon=stlToMesh(readStl("Test2.stl"));
 	if(windowSetup()!=0){
         return -1;
     }
@@ -72,7 +72,8 @@ int main(){
     programID = LoadShaders( "mainVert.glsl", "mainFrag.glsl" );
 	glUseProgram(programID);
 	glfwSetKeyCallback(window,keyHandler);
-	addToDraw(triangle);
+	addToDraw(dragon);
+	//addToDraw(triangle);
     while(!glfwWindowShouldClose(window)){
         glfwPollEvents();
         frame();
@@ -100,11 +101,11 @@ void frame(){
 
 void draw(const Object o){
     glEnableVertexAttribArray(0);
-    glBufferData(GL_ARRAY_BUFFER, o.count*3*sizeof(float), o.mesh, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, o.count*9*sizeof(float), o.mesh, GL_STREAM_DRAW);
     glVertexAttribPointer(
         0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
     );
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_TRIANGLES, 0, o.count);
     glDisableVertexAttribArray(0);
 };
 
@@ -174,7 +175,7 @@ void glSetup(){
     glBindVertexArray(VertexArrayID);
     glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 }
 
 
@@ -204,8 +205,6 @@ int windowSetup(){
         fprintf(stderr, "Failed to initialize GLEW \n");
         return -1;
     }
-    //fprintf(stdout, "Window setup successful!\n");
-    //glfwSetWindowMonitor(window,NULL,100,100,1024,768,GLFW_DONT_CARE);
     return 0;
 }
 

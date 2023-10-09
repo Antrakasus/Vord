@@ -16,3 +16,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "libs/glew.c"
+
+#ifndef uint
+#define uint unsigned int
+#endif
